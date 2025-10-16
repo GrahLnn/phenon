@@ -110,52 +110,52 @@ const TopBar = memo(function TopBarComponent() {
   const windowFocused = useIsWindowFocus();
   const allowBarInteraction = station.allowBarInteraction.useSee();
 
-  useEffect(() => {
-    if (!windowFocused) {
-      document.body.setAttribute("window-blur", "");
+  //   useEffect(() => {
+  //     if (!windowFocused) {
+  //       document.body.setAttribute("window-blur", "");
 
-      // 创建遮罩层
-      const overlay = document.createElement("div");
-      overlay.id = "window-blur-overlay";
-      overlay.className = "window-blur-overlay";
+  //       // 创建遮罩层
+  //       const overlay = document.createElement("div");
+  //       overlay.id = "window-blur-overlay";
+  //       overlay.className = "window-blur-overlay";
 
-      // 添加事件监听器以捕获所有事件
-      const blockEvent = (e: Event) => {
-        e.stopPropagation();
-        e.preventDefault();
-      };
+  //       // 添加事件监听器以捕获所有事件
+  //       const blockEvent = (e: Event) => {
+  //         e.stopPropagation();
+  //         e.preventDefault();
+  //       };
 
-      overlay.addEventListener("mousedown", blockEvent, true);
-      overlay.addEventListener("mouseup", blockEvent, true);
-      overlay.addEventListener("click", blockEvent, true);
-      overlay.addEventListener("dblclick", blockEvent, true);
-      overlay.addEventListener("contextmenu", blockEvent, true);
-      overlay.addEventListener("wheel", blockEvent, true);
-      overlay.addEventListener("touchstart", blockEvent, true);
-      overlay.addEventListener("touchend", blockEvent, true);
-      overlay.addEventListener("touchmove", blockEvent, true);
-      overlay.addEventListener("keydown", blockEvent, true);
-      overlay.addEventListener("keyup", blockEvent, true);
+  //       overlay.addEventListener("mousedown", blockEvent, true);
+  //       overlay.addEventListener("mouseup", blockEvent, true);
+  //       overlay.addEventListener("click", blockEvent, true);
+  //       overlay.addEventListener("dblclick", blockEvent, true);
+  //       overlay.addEventListener("contextmenu", blockEvent, true);
+  //       overlay.addEventListener("wheel", blockEvent, true);
+  //       overlay.addEventListener("touchstart", blockEvent, true);
+  //       overlay.addEventListener("touchend", blockEvent, true);
+  //       overlay.addEventListener("touchmove", blockEvent, true);
+  //       overlay.addEventListener("keydown", blockEvent, true);
+  //       overlay.addEventListener("keyup", blockEvent, true);
 
-      document.body.appendChild(overlay);
-    } else {
-      document.body.removeAttribute("window-blur");
+  //       document.body.appendChild(overlay);
+  //     } else {
+  //       document.body.removeAttribute("window-blur");
 
-      // 移除遮罩层
-      const overlay = document.getElementById("window-blur-overlay");
-      if (overlay) {
-        document.body.removeChild(overlay);
-      }
-    }
+  //       // 移除遮罩层
+  //       const overlay = document.getElementById("window-blur-overlay");
+  //       if (overlay) {
+  //         document.body.removeChild(overlay);
+  //       }
+  //     }
 
-    // 清理函数
-    return () => {
-      const overlay = document.getElementById("window-blur-overlay");
-      if (overlay) {
-        document.body.removeChild(overlay);
-      }
-    };
-  }, [windowFocused]);
+  //     // 清理函数
+  //     return () => {
+  //       const overlay = document.getElementById("window-blur-overlay");
+  //       if (overlay) {
+  //         document.body.removeChild(overlay);
+  //       }
+  //     };
+  //   }, [windowFocused]);
 
   return (
     <>

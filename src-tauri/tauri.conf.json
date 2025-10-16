@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "",
-  "version": "",
-  "identifier": "",
+  "productName": "Phenon",
+  "version": "0.0.1",
+  "identifier": "phenon",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
@@ -56,9 +56,9 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE4QTk2Nzk3Q0FEQ0I0RTMKUldUanROektsMmVwR0F1ZWE4Y1ozY3E4WEhjbWN2cHFXVnl2dXV3dTBGemFzVFY4WGlqd0s3Wm4K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc2Rjk2RTFBMkY0Nzg1RjQKUldUMGhVY3ZHbTc1ZHFVd0U5L2paOHA3VUdtK1BTUElLa0lrQWh1VWtid1R4NmpCdWVZK05Ka0sK",
       "endpoints": [
-        "https://github.com/{}/{}/releases/latest/download/latest.json"
+        "https://github.com/GrahLnn/phenon/releases/latest/download/latest.json"
       ]
     }
   }
