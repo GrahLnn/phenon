@@ -8,7 +8,7 @@ actor.subscribe((snapshot) => {
       ? snapshot.value
       : to_string(snapshot.value);
 
-  console.log(`[updater] ${state}`, snapshot.context);
+  console.log(`[templete] ${state}`, snapshot.context);
 });
 export * from "./api";
 export * from "./events";

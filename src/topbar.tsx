@@ -6,6 +6,8 @@ import { type PropsWithChildren, memo, useEffect } from "react";
 import { useIsBarVisible } from "./state_machine/barVisible";
 import { useIsWindowFocus } from "./state_machine/windowFocus";
 import { station } from "./subpub/buses";
+import { action as graphaction } from "./state_machine/graph";
+import { me } from "@/lib/matchable";
 
 interface CtrlButtonProps extends PropsWithChildren {
   icon?: React.ReactNode;
@@ -18,7 +20,7 @@ interface CtrlButtonProps extends PropsWithChildren {
 
 const CtrlButton = memo(function CtrlButtonComp({
   icon,
-  label,
+  label: _label,
   onClick = () => {},
   className,
   o,
@@ -57,7 +59,7 @@ const CtrlButton = memo(function CtrlButtonComp({
 export const LeftControls = memo(function LeftControlsComponent() {
   const os = station.os.useSee();
   return (
-    <div className="flex items-center px-2 text-[var(--content)]">
+    <div className="flex items-center px-2 text-(--content)">
       {os.match({
         macos: () => <div className="w-[84px]" />,
         _: () => null,
@@ -68,14 +70,19 @@ export const LeftControls = memo(function LeftControlsComponent() {
 
 const RightControls = memo(function RightControlsComponent() {
   const os = station.os.useSee();
-  const isVisible = useIsBarVisible();
-
-  const checkcn =
-    "dark:hover:bg-[#373737] hover:bg-[#d4d4d4] opacity-70 hover:opacity-100 rounded-full transition cursor-pointer";
+  const add_node = graphaction.add_node;
   return (
     <div className={cn(["flex items-center"])}>
-      <CtrlButton label="Search" icon={<icons.magnifler3 size={14} />} />
-      <CtrlButton label="Language" icon={<icons.globe3 size={14} />} />
+      <CtrlButton
+        label="Search"
+        icon={<icons.magnifler3 size={14} />}
+        onClick={() => add_node(me("Node"))}
+      />
+      <CtrlButton
+        label="Language"
+        icon={<icons.globe3 size={14} />}
+        onClick={() => graphaction.out_node()}
+      />
       <CtrlButton label="Update" icon={<icons.arrowDown size={14} />} />
 
       {os.match({
@@ -163,7 +170,7 @@ const TopBar = memo(function TopBarComponent() {
         <div
           className={cn([
             "flex flex-none relative",
-            "w-full h-8 z-[100] select-none",
+            "w-full h-8 z-100 select-none",
             "before:content-[''] before:absolute before:inset-0 before:-z-10",
             "before:bg-gradient-to-b before:from-[var(--app-bg)] before:to-[var(--app-bg)]/60",
             "before:transition-colors before:duration-500 before:ease-in-out",

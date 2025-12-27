@@ -13,6 +13,11 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    host: "127.0.0.1",
+    port: 5173,
+    strictPort: false,
+  },
   tools: {
     rspack: {
       watchOptions: {
@@ -21,25 +26,23 @@ export default defineConfig({
     },
   },
   html: {
-    tags: [
-      ...(isDev
-        ? [
-            {
-              tag: "script",
-              attrs: {
-                src: "https://unpkg.com/react-scan/dist/auto.global.js",
-              },
-              head: true,
+    tags: isDev
+      ? [
+          {
+            tag: "script",
+            attrs: {
+              src: "https://unpkg.com/react-scan/dist/auto.global.js",
             },
-            {
-              tag: "script",
-              attrs: {
-                src: "http://localhost:8097",
-              },
-              head: true,
+            head: true,
+          },
+          {
+            tag: "script",
+            attrs: {
+              src: "http://localhost:8097",
             },
-          ]
-        : []),
-    ],
+            head: true,
+          },
+        ]
+      : [],
   },
 });

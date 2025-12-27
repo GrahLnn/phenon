@@ -29,8 +29,10 @@ export const W =
   <A, B>(f: (a: A) => (b: A) => B) =>
   (x: A): B =>
     f(x)(x);
+
 export const T =
   <A, B>(x: A) =>
   (f: (a: A) => B): B =>
     f(x);
+
 export const call0 = <R>(f: () => R): R => f();

@@ -180,10 +180,10 @@ h1 {
   }
 }
 
-[data-rounded-scroll='true'] div::-webkit-scrollbar {
+[data-rounded-scroll="true"] div::-webkit-scrollbar {
   display: none;
 }
-[data-rounded-scroll='true'] div {
+[data-rounded-scroll="true"] div {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }

@@ -10,7 +10,26 @@ import { lievt } from "@/src/cmd/commandAdapter";
 
 export const machine = src.createMachine({
   initial: state.mainx.idle,
-  context: {},
+  context: {
+    variant: null,
+  },
   on: {},
-  states: {},
+  states: {
+    [state.mainx.idle]: {
+      on: {
+        [sig.mainx.to_hover.evt]: state.mainx.hover,
+        [sig.mainx.to_wait.evt]: state.mainx.wait,
+      },
+    },
+    [state.mainx.hover]: {
+      on: {
+        [sig.mainx.to_idle.evt]: state.mainx.idle,
+      },
+    },
+    [state.mainx.wait]: {
+      on: {
+        [sig.mainx.to_idle.evt]: state.mainx.idle,
+      },
+    },
+  },
 });
