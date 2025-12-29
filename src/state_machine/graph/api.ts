@@ -19,7 +19,11 @@ export const hook = {
 export const action = {
   start_drag: () => send(sig.mainx.to_drag),
   end_drag: () => send(sig.mainx.to_idle),
+  drag_start: B(payloads.drag_start.load)(send),
+  drag_end: () => send(payloads.drag_end.load(null)),
   add_node: B(payloads.new_node.load)(send),
+  add_edge: B(payloads.new_edge.load)(send),
+  merge_nodes: B(payloads.merge_nodes.load)(send),
   out_node: () => send(sig.mainx.new_out_node),
   link_node: B(payloads.link.load)(send),
   unlink_node: B(payloads.unlink.load)(send),

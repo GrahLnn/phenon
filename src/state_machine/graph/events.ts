@@ -5,7 +5,6 @@ import {
   sst,
   event,
   machine,
-  ActorInput,
   createActors,
   InvokeEvt,
   MachineEvt,
@@ -29,6 +28,7 @@ type EdgeLoadBase = {
 type EdgeLoad = AtLeastOne<EdgeLoadBase, "source" | "target">;
 
 type IdPair = { edge: EdgeId; source: NodeId };
+type MergeNodesLoad = { from: NodeId; into: NodeId };
 
 export const ss = defineSS(
   ns("resultx", resultx),
@@ -41,6 +41,9 @@ export const invoker = createActors({});
 export const payloads = collect(
   event<NodeType>()("new_node"),
   event<EdgeLoad>()("new_edge"),
+  event<NodeId>()("drag_start"),
+  event<null>()("drag_end"),
+  event<MergeNodesLoad>()("merge_nodes"),
   event<IdPair>()("link"),
   event<EdgeId>()("unlink")
 );

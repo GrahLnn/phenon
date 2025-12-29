@@ -508,6 +508,23 @@ export function WorldItem({
   const start_drag = action.start_drag;
   const end_drag = action.end_drag;
 
+  const latestRef = useRef({
+    onElement,
+    onDragStart,
+    onDrag,
+    onPositionChange,
+    onDragEnd,
+    getZoom,
+  });
+  latestRef.current = {
+    onElement,
+    onDragStart,
+    onDrag,
+    onPositionChange,
+    onDragEnd,
+    getZoom,
+  };
+
   const mergedRef = useCallback(
     (node: HTMLDivElement | null) => {
       itemRef.current = node;
@@ -555,7 +572,7 @@ export function WorldItem({
     const el = itemRef.current;
     if (!el || !draggable) return;
 
-    onElement?.(el);
+    latestRef.current.onElement?.(el);
 
     // dom 模式下：即使父组件因为别的原因重渲染，也把当前位置写回 DOM，避免被 props x/y 覆盖
     if (dragMode === "dom") {
@@ -624,7 +641,7 @@ export function WorldItem({
                 );
                 yield* Effect.sync(() => {
                   start_drag();
-                  onDragStart?.();
+                  latestRef.current.onDragStart?.();
                 });
                 return;
               }
@@ -640,7 +657,7 @@ export function WorldItem({
 
                 const startClient = yield* Ref.get(startClientRef);
                 const startPos = yield* Ref.get(startPosRef);
-                const z = getZoom?.() ?? 1;
+                const z = latestRef.current.getZoom?.() ?? 1;
 
                 const dx = (ev.e.clientX - startClient.x) / z;
                 const dy = (ev.e.clientY - startClient.y) / z;
@@ -652,13 +669,13 @@ export function WorldItem({
                     posRef.current = nextPos;
                     if (positionRef) positionRef.current = nextPos;
                     el.style.transform = worldItemTransform(nextPos);
-                    onDrag?.(nextPos);
+                    latestRef.current.onDrag?.(nextPos);
                   });
                   return;
                 }
 
                 yield* Effect.sync(() => {
-                  onPositionChange?.(nextPos);
+                  latestRef.current.onPositionChange?.(nextPos);
                 });
                 return;
               }
@@ -674,7 +691,7 @@ export function WorldItem({
                     el.releasePointerCapture?.(ev.e.pointerId);
                   }
                   end_drag();
-                  onDragEnd?.();
+                  latestRef.current.onDragEnd?.();
                 });
                 return;
               }

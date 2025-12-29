@@ -18,6 +18,12 @@ export const src = setup({
     events: {} as Events,
   },
   actions: {
+    drag_start: assign({
+      draggingNodeId: EH.take(payloads.drag_start.evt)(I),
+    }),
+    drag_end: assign({
+      draggingNodeId: EH.take(payloads.drag_end.evt)(K(null)),
+    }),
     add_node: assign({
       nodes: EH.take(payloads.new_node.evt)((ty, c) => {
         const id = crypto.randomUUID();
@@ -41,6 +47,30 @@ export const src = setup({
             ...load,
           },
         };
+      }),
+    }),
+    merge_nodes: assign({
+      nodes: EH.take(payloads.merge_nodes.evt)(({ from, into }, c) => {
+        if (!from || !into) return c.nodes;
+        if (from === into) return c.nodes;
+        if (!c.nodes[from] || !c.nodes[into]) return c.nodes;
+        const nodes = { ...c.nodes } as Record<NodeId, Node>;
+        delete nodes[from];
+        return nodes;
+      }),
+      edges: EH.take(payloads.merge_nodes.evt)(({ from, into }, c) => {
+        if (!from || !into) return c.edges;
+        if (from === into) return c.edges;
+        const edges = { ...c.edges } as Record<EdgeId, Edge>;
+        for (const eid of Object.keys(edges)) {
+          const e = edges[eid];
+          if (!e) continue;
+          const next = { ...e } as any;
+          if (next.source === from) next.source = into;
+          if (next.target === from) next.target = into;
+          edges[eid] = next;
+        }
+        return edges;
       }),
     }),
     out_node: enqueueActions(({ context, enqueue }) => {

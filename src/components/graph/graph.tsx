@@ -1,6 +1,12 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Panel } from "./pannel";
-import { hook } from "../../state_machine/graph";
+import { action, hook } from "../../state_machine/graph";
+import {
+  getExcludedByArrowOtherEnd,
+  getDraggingNodeType,
+  getNodeConnectType,
+  shouldShowDragHintRing,
+} from "../../state_machine/graph/selectors";
 import {
   Simulation,
   type SimNode,
@@ -32,9 +38,15 @@ const syncNodeDom = (
   }
 };
 
+const DROP_CONNECT_RADIUS_PX = 60;
+
 export function Graph() {
   const nodes = hook.useNodes();
   const edges = hook.useEdges();
+  const ctx = hook.useContext();
+  const st = hook.useState();
+  const isDragMode = st.is("drag");
+  const draggingNodeId = ctx.draggingNodeId;
   const hostRef = useRef<HTMLDivElement | null>(null);
   const transformRef = useRef<Transform>({ zoom: 1, origin: { x: 0, y: 0 } });
 
@@ -44,6 +56,7 @@ export function Graph() {
     Array<{ source_id: string; target_id: string; centerDistance?: number }>
   >([]);
   const dragCountRef = useRef(0);
+  const pinnedRef = useRef<Set<string>>(new Set());
 
   const posRefMap = useRef<Map<string, MutRef<Vec2>>>(new Map());
   const knownIdsRef = useRef<Set<string>>(new Set());
@@ -54,6 +67,13 @@ export function Graph() {
     zoom: 1,
     origin: { x: 0, y: 0 },
   });
+
+  const onTransformChange = useCallback((t: Transform) => {
+    if (transformRef.current) {
+      transformRef.current.zoom = t.zoom;
+      transformRef.current.origin = t.origin;
+    }
+  }, []);
 
   const { nodesForRender, edgesForRender, ghostSpecById, ghostEdgeLenById } =
     useMemo(() => {
@@ -110,6 +130,95 @@ export function Graph() {
         ghostEdgeLenById,
       };
     }, [nodes, edges]);
+
+  const pinnableIds = useMemo(() => {
+    if (!isDragMode) return [] as string[];
+    if (!draggingNodeId) return [] as string[];
+
+    const excludedByArrowOtherEnd = getExcludedByArrowOtherEnd({
+      isDragMode,
+      draggingNodeId,
+      edges: edgesForRender as any,
+    }) as Set<string>;
+
+    const draggingNodeType =
+      getDraggingNodeType({
+        draggingNodeId,
+        nodes: nodesForRender as any,
+      }) ?? "unit";
+
+    const out: string[] = [];
+    for (const id of Object.keys(nodesForRender)) {
+      const nodeType = getNodeConnectType({ id, nodes: nodesForRender as any });
+      if (
+        shouldShowDragHintRing({
+          isDragMode,
+          id,
+          nodeType,
+          draggingNodeId,
+          draggingNodeType,
+          excludedByArrowOtherEnd,
+        })
+      ) {
+        out.push(id);
+      }
+    }
+    return out;
+  }, [isDragMode, draggingNodeId, edgesForRender, nodesForRender]);
+
+  useLayoutEffect(() => {
+    const pinned = pinnedRef.current;
+    const simNodes = simNodesRef.current;
+    const posMap = posRefMap.current;
+    const sim = simRef.current;
+
+    if (!isDragMode || !draggingNodeId) {
+      for (const id of Array.from(pinned)) {
+        const n = simNodes[id];
+        if (n) {
+          n.fx = undefined;
+          n.fy = undefined;
+        }
+        pinned.delete(id);
+      }
+      return;
+    }
+
+    const next = new Set(pinnableIds);
+
+    for (const id of Array.from(pinned)) {
+      if (!next.has(id) || !simNodes[id]) {
+        const n = simNodes[id];
+        if (n) {
+          n.fx = undefined;
+          n.fy = undefined;
+        }
+        pinned.delete(id);
+      }
+    }
+
+    for (const id of Array.from(next)) {
+      if (pinned.has(id)) continue;
+      const n = simNodes[id];
+      if (!n) continue;
+
+      const p = posMap?.get(id)?.current;
+      const x = p?.x ?? n.x;
+      const y = p?.y ?? n.y;
+      n.fx = x;
+      n.fy = y;
+      n.x = x;
+      n.y = y;
+      n.vx = 0;
+      n.vy = 0;
+      pinned.add(id);
+    }
+
+    if (sim && pinned.size > 0) {
+      sim.alphaDecay(0);
+      sim.alpha(0.25);
+    }
+  }, [isDragMode, draggingNodeId, pinnableIds]);
 
   useLayoutEffect(() => {
     if (simRef.current) return;
@@ -332,12 +441,7 @@ export function Graph() {
       <Panel
         className="w-full h-full"
         initial={initial}
-        onTransformChange={(t) => {
-          if (transformRef.current) {
-            transformRef.current.zoom = t.zoom;
-            transformRef.current.origin = t.origin;
-          }
-        }}
+        onTransformChange={onTransformChange}
       >
         <EdgeLayer
           edges={edgesForRender}
@@ -395,6 +499,59 @@ export function Graph() {
             if (sim && dragCountRef.current === 0) {
               sim.alphaDecay(SIM_ALPHA_DECAY_DEFAULT);
               sim.alpha(0.25);
+            }
+
+            const draggedPos = posRefMap.current?.get(id)?.current;
+            if (!draggedPos) return;
+
+            const z = transformRef.current?.zoom ?? 1;
+            const rWorld = DROP_CONNECT_RADIUS_PX / (z || 1);
+
+            const excludedByArrowOtherEnd = getExcludedByArrowOtherEnd({
+              isDragMode: true,
+              draggingNodeId: id,
+              edges: edges as any,
+            }) as Set<string>;
+
+            const draggingNodeType =
+              getDraggingNodeType({
+                draggingNodeId: id,
+                nodes: nodes as any,
+              }) ?? "unit";
+
+            let bestId: string | null = null;
+            let bestD = Infinity;
+
+            for (const candId of Object.keys(nodes)) {
+              if (candId === id) continue;
+
+              const nodeType = getNodeConnectType({
+                id: candId,
+                nodes: nodes as any,
+              });
+
+              const ok = shouldShowDragHintRing({
+                isDragMode: true,
+                id: candId,
+                nodeType,
+                draggingNodeId: id,
+                draggingNodeType,
+                excludedByArrowOtherEnd,
+              });
+              if (!ok) continue;
+
+              const p = posRefMap.current?.get(candId)?.current;
+              if (!p) continue;
+
+              const d = Math.hypot(draggedPos.x - p.x, draggedPos.y - p.y);
+              if (d <= rWorld && d < bestD) {
+                bestD = d;
+                bestId = candId;
+              }
+            }
+
+            if (bestId) {
+              action.merge_nodes({ from: id, into: bestId });
             }
           }}
         />

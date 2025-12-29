@@ -1,72 +1,40 @@
 import type { CSSProperties, RefObject } from "react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { WorldItem } from "./pannel";
 
 import { Vec2, MutRef, Transform, getOrCreateRef } from "./graph_utils";
 import { cn } from "@/lib/utils";
-import { hook } from "@/src/state_machine/graph";
-
-function getPortVariant(args: {
-  id: string;
-  edges: Record<string, any> | null | undefined;
-}) {
-  const { id, edges } = args;
-  let isIn = false;
-  let isOut = false;
-
-  for (const eid of Object.keys(edges ?? {})) {
-    const e = (edges as any)[eid];
-    const isArrow = e?.ty?.is?.("AR") ?? false;
-    if (!isArrow) continue;
-    const src = e?.source as string | undefined;
-    const tgt = e?.target as string | undefined;
-    if (src === id) isIn = true;
-    if (tgt === id) isOut = true;
-  }
-
-  if (isIn && isOut) return "io" as const;
-  if (isIn) return "i" as const;
-  if (isOut) return "o" as const;
-  return null;
-}
+import { action, hook } from "@/src/state_machine/graph";
+import {
+  getExcludedByArrowOtherEnd,
+  getDraggingNodeType,
+  getNodeConnectType,
+  getPortVariant as getPortVariantSel,
+  nodeVisualCls as nodeVisualClsSel,
+  shouldShowDragHintRing,
+} from "@/src/state_machine/graph/selectors";
 
 function nodeVisualCls(args: {
   nodeBaseCls: string;
   portVariant: "i" | "o" | "io" | null;
 }) {
   const { nodeBaseCls, portVariant } = args;
-  const inPortCls = "dark:border-[#e5e5e5] border-[#525252] bg-background";
-  const outPortCls =
-    "bg-[#525252] dark:bg-[#e5e5e5] border-[#525252] dark:border-[#e5e5e5]";
-
   // in 端口沿用原 ghost 外观；其它默认按 out 端口走
-  const fill = portVariant === "i" ? inPortCls : outPortCls;
-  return cn(nodeBaseCls, fill);
-}
-
-function shouldShowDragHintRing(args: {
-  isDragMode: boolean;
-  id: string;
-  nodeType: string;
-  draggingNodeId: string | null;
-  draggingNodeType: string;
-  excludedByArrowOtherEnd: Set<string>;
-}) {
-  const {
-    isDragMode,
-    id,
-    nodeType,
-    draggingNodeId,
-    draggingNodeType,
-    excludedByArrowOtherEnd,
-  } = args;
-
-  if (!isDragMode) return false;
-  if (!draggingNodeId) return false;
-  if (id === draggingNodeId) return false;
-  if (excludedByArrowOtherEnd.has(id)) return false;
-  if (nodeType !== draggingNodeType) return false;
-  return true;
+  if (portVariant === "io") {
+    return cn(
+      nodeBaseCls,
+      "relative",
+      "bg-background",
+      "border-[#525252] dark:border-[#e5e5e5]",
+      "after:content-['']",
+      "after:block",
+      "after:absolute after:inset-0 after:m-auto",
+      "after:w-[6px] after:h-[6px]",
+      "after:rounded-full",
+      "after:bg-[#525252] dark:after:bg-[#e5e5e5]"
+    );
+  }
+  return nodeVisualClsSel({ nodeBaseCls, portVariant });
 }
 
 interface NodeLayerProps {
@@ -99,29 +67,17 @@ export function NodeLayer({
   const state = hook.useState();
   const is_drag = state.is("drag");
   const edges = hook.useEdges();
-  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+  const draggingNodeId = hook.useContext().draggingNodeId ?? null;
 
   const draggingNodeType =
-    (draggingNodeId
-      ? (nodes?.[draggingNodeId]?.type as string | undefined)
-      : undefined) ?? "unit";
+    getDraggingNodeType({ draggingNodeId, nodes: nodes as any }) ?? "unit";
 
   const excludedByArrowOtherEnd = useMemo(() => {
-    const set = new Set<string>();
-    if (!is_drag || !draggingNodeId) return set;
-
-    for (const eid of Object.keys(edges ?? {})) {
-      const e = (edges as any)[eid];
-      const isArrow = e?.ty?.is?.("AR") ?? false;
-      if (!isArrow) continue;
-      const src = e?.source as string | undefined;
-      const tgt = e?.target as string | undefined;
-      if (!src || !tgt) continue;
-      if (src === draggingNodeId) set.add(tgt);
-      else if (tgt === draggingNodeId) set.add(src);
-    }
-
-    return set;
+    return getExcludedByArrowOtherEnd({
+      isDragMode: is_drag,
+      draggingNodeId,
+      edges: edges as any,
+    }) as Set<string>;
   }, [edges, is_drag, draggingNodeId]);
 
   return (
@@ -133,8 +89,8 @@ export function NodeLayer({
           y: 0,
         }));
 
-        const portVariant = getPortVariant({ id, edges: edges as any });
-        const nodeType = (nodes?.[id]?.type as string | undefined) ?? "unit";
+        const portVariant = getPortVariantSel({ id, edges: edges as any });
+        const nodeType = getNodeConnectType({ id, nodes: nodes as any });
 
         const showDragHintRing = shouldShowDragHintRing({
           isDragMode: is_drag,
@@ -202,7 +158,7 @@ export function NodeLayer({
             positionRef={posRef}
             getZoom={() => transformRef.current?.zoom ?? 1}
             onDragStart={() => {
-              setDraggingNodeId(id);
+              action.drag_start(id);
               onNodeDragStart?.(id);
             }}
             onDrag={(pos) => {
@@ -210,7 +166,7 @@ export function NodeLayer({
               onDirty?.();
             }}
             onDragEnd={() => {
-              setDraggingNodeId(null);
+              action.drag_end();
               onNodeDragEnd?.(id);
             }}
           >
@@ -220,7 +176,7 @@ export function NodeLayer({
                 className={cn(
                   "w-full h-full",
                   showDragHintRing
-                    ? "text-emerald-700 dark:text-emerald-600"
+                    ? "text-emerald-500 dark:text-emerald-600"
                     : "text-[#737373] dark:text-[#a3a3a3]"
                 )}
                 viewBox={`0 0 ${hoverRingViewBox} ${hoverRingViewBox}`}

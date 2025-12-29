@@ -1,4 +1,3 @@
-import { ActorRefFromLogic } from "xstate";
 import { Matchable } from "@/lib/matchable";
 
 export type AtLeastOne<T, K extends keyof T = keyof T> = K extends keyof T
@@ -33,6 +32,7 @@ export type Context = {
   in: Record<NodeId, EdgeId[]>;
   // 可选：viewport/transform
   transform: { zoom: number; origin: { x: number; y: number } };
+  draggingNodeId: NodeId | null;
   // 可选：交互态
   dragging?: { nodeId: NodeId; pointerId: number; dx: number; dy: number };
 };
